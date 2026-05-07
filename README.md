@@ -34,7 +34,7 @@ The key success signal is that the second app returns the same `sessionId` and s
 This project was verified with:
 
 ```bash
-/Users/roniko/Library/Java/JavaVirtualMachines/graalvm-ce-21.0.2/Contents/Home/bin/native-image --version
+graalvm-ce-21.0.2/Contents/Home/bin/native-image --version
 ```
 
 Expected shape:
@@ -73,8 +73,8 @@ mvn -pl session-codec -am -DskipTests install
 Build the native executable with GraalVM:
 
 ```bash
-JAVA_HOME=/Users/roniko/Library/Java/JavaVirtualMachines/graalvm-ce-21.0.2/Contents/Home \
-PATH=/Users/roniko/Library/Java/JavaVirtualMachines/graalvm-ce-21.0.2/Contents/Home/bin:$PATH \
+JAVA_HOME=JavaVirtualMachines/graalvm-ce-21.0.2/Contents/Home \
+PATH=JavaVirtualMachines/graalvm-ce-21.0.2/Contents/Home/bin:$PATH \
 mvn -pl native-app -Pnative native:compile
 ```
 
