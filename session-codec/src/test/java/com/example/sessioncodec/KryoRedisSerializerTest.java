@@ -42,15 +42,34 @@ class KryoRedisSerializerTest {
         byte[] second = new KryoRedisSerializer(new KryoFactory()).serialize(user);
 
         assertThat(second).isEqualTo(first);
-        assertThat(HexFormat.of().formatHex(first)).startsWith("0101");
+        assertThat(HexFormat.of().formatHex(first)).startsWith("02011f8b");
     }
 
     @Test
     void roundTripsNullWithVersionedEnvelope() {
         byte[] bytes = serializer.serialize(null);
 
-        assertThat(bytes).containsExactly((byte) 1, (byte) 0);
+        assertThat(bytes).containsExactly((byte) 2, (byte) 0);
         assertThat(serializer.deserialize(bytes)).isNull();
+    }
+
+    @Test
+    void compressesKryoPayload() {
+        String value = "session-value-".repeat(100);
+
+        byte[] compressed = serializer.serialize(value);
+
+        assertThat(compressed).hasSizeLessThan(value.getBytes().length);
+        assertThat(serializer.deserialize(compressed)).isEqualTo(value);
+    }
+
+    @Test
+    void rejectsOldUncompressedFormat() {
+        byte[] oldEnvelope = { 1, 1, 0 };
+
+        assertThatThrownBy(() -> serializer.deserialize(oldEnvelope))
+                .isInstanceOf(SerializationException.class)
+                .hasMessageContaining("Unsupported Kryo session payload version");
     }
 
     @Test

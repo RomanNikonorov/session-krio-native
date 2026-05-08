@@ -109,20 +109,22 @@ Run the smoke script:
 bash scripts/smoke.sh
 ```
 
-Expected output has four JSON responses:
+Expected output has three JSON responses and a final success line:
 
 1. `jvm-app` creates a session.
-2. `native-app` reads the same `sessionId`.
-3. `native-app` creates a session.
-4. `jvm-app` reads the same `sessionId`.
+2. `jvm-app` reads the same `sessionId`.
+3. `native-app` reads the same `sessionId`.
 
 Example:
 
 ```text
+JVM creates session
 {"app":"jvm-app","sessionId":"cb05c80e-da37-4464-9c9b-7ed0861b21c7",...}
+JVM reads created session
+{"app":"jvm-app","sessionId":"cb05c80e-da37-4464-9c9b-7ed0861b21c7",...}
+Native reads JVM session
 {"app":"native-app","sessionId":"cb05c80e-da37-4464-9c9b-7ed0861b21c7",...}
-{"app":"native-app","sessionId":"80a0d03a-73e0-4a0b-9a26-942b08339db1",...}
-{"app":"jvm-app","sessionId":"80a0d03a-73e0-4a0b-9a26-942b08339db1",...}
+OK: JVM and native app read sessionId cb05c80e-da37-4464-9c9b-7ed0861b21c7
 ```
 
 Matching `sessionId` values prove that both applications are reading and writing the same Redis-backed Spring Session data.
@@ -139,18 +141,6 @@ Read it from the native executable:
 
 ```bash
 curl -b cookies.txt http://127.0.0.1:8081/session
-```
-
-Create a session in the native executable:
-
-```bash
-curl -i -c native-cookies.txt http://127.0.0.1:8081/session/create
-```
-
-Read it from the JVM app:
-
-```bash
-curl -b native-cookies.txt http://127.0.0.1:8080/session
 ```
 
 ## What Was Done For Native Session Reading
@@ -192,15 +182,15 @@ server:
 - `Instant` and `Duration` have explicit serializers instead of Java serialization.
 - Collection and map classes are registered with explicit `CollectionSerializer` and `MapSerializer` instances. This is important for native images: relying on Kryo default serializer discovery caused the native executable to fail because it tried to instantiate serializers reflectively.
 - `KryoSessionRuntimeHints` registers reflection hints for the shared serializer and DTO types used by the native image.
-- `KryoRedisSerializer` wraps all payloads in a small versioned envelope:
+- `KryoRedisSerializer` wraps all payloads in a small versioned envelope and compresses non-null Kryo payloads with GZIP:
 
 ```text
 byte 0: format version
 byte 1: null marker
-remaining bytes: Kryo payload
+remaining bytes: GZIP-compressed Kryo payload
 ```
 
-This gives a place to introduce future format migrations without guessing which serializer produced the Redis value.
+The current compressed format is version `2`; older uncompressed payload versions are rejected. The envelope gives a place to introduce future format migrations without guessing which serializer produced the Redis value.
 
 ## Known Constraints
 
